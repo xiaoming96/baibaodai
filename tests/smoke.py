@@ -16,6 +16,8 @@ with sync_playwright() as playwright:
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.goto(BASE_URL, wait_until='networkidle')
     expect(page.locator('h1')).to_contain_text('今天的烦恼')
+    if page.get_by_role('button', name='好啦，去掏口袋').is_visible():
+        page.get_by_role('button', name='好啦，去掏口袋').click()
     page.screenshot(path=str(OUTPUT / 'desktop.png'), full_page=True)
     page.get_by_role('button', name='帮我找找', exact=True).click()
     expect(page.get_by_role('status')).to_contain_text('先把你的小烦恼')
@@ -87,6 +89,8 @@ with sync_playwright() as playwright:
         mobile = context.new_page()
         mobile.on('pageerror', lambda error: errors.append(str(error)))
         mobile.goto(BASE_URL, wait_until='networkidle')
+        if mobile.get_by_role('button', name='好啦，去掏口袋').is_visible():
+            mobile.get_by_role('button', name='好啦，去掏口袋').click()
         assert mobile.evaluate('document.documentElement.scrollWidth <= innerWidth'), f'overflow at {width}'
         mobile.screenshot(path=str(OUTPUT / f'mobile-{width}.png'), full_page=True)
         mobile.get_by_role('button', name='关于事务所').click()
@@ -107,6 +111,8 @@ with sync_playwright() as playwright:
         offline_context = browser.new_context()
         offline_page = offline_context.new_page()
         offline_page.goto(BASE_URL, wait_until='networkidle')
+        if offline_page.get_by_role('button', name='好啦，去掏口袋').is_visible():
+            offline_page.get_by_role('button', name='好啦，去掏口袋').click()
         offline_page.evaluate('navigator.serviceWorker.ready.then(() => true)')
         offline_page.wait_for_function('navigator.serviceWorker.controller !== null')
         offline_context.set_offline(True)

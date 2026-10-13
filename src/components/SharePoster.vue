@@ -6,8 +6,9 @@ const props = defineProps({
   gadget: { type: Object, required: true },
   outcome: { type: Object, default: null },
   worry: { type: String, default: '' },
+  member: { type: Boolean, default: false },
 })
-const emit = defineEmits(['close'])
+const emit = defineEmits(['close', 'shared', 'downloaded'])
 
 const templates = [
   { id: 'healing', label: '治愈向', text: '今天的烦恼，被奇妙道具接住了。' },
@@ -158,10 +159,12 @@ function drawFallbackArt(ctx) {
 
 async function createPosterBlob() {
   const canvas = document.createElement('canvas')
-  canvas.width = 860
-  canvas.height = 1200
+  const scale = props.member ? 2 : 1
+  canvas.width = 860 * scale
+  canvas.height = 1200 * scale
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('这个浏览器暂时无法生成图片，请换个浏览器试试。')
+  ctx.setTransform(scale, 0, 0, scale, 0, 0)
   const ink = '#344638'
   ctx.fillStyle = '#faf5e7'
   ctx.fillRect(0, 0, 860, 1200)
@@ -263,6 +266,7 @@ async function downloadPoster() {
     link.click()
     link.remove()
     setTimeout(() => URL.revokeObjectURL(url), 60000)
+    emit('downloaded', { type: 'poster', width: props.member ? 1720 : 860, height: props.member ? 2400 : 1200 })
     message.value = '海报已准备好。微信内如未下载，请用系统浏览器打开后保存。'
   } catch (error) {
     if (live) message.value = error.message || '图片生成失败，请再试一次。'
@@ -288,7 +292,10 @@ async function sharePoster() {
       return
     }
     await navigator.share({ files: [file], title: '奇妙口袋事务所', text: caption.value })
-    if (live) message.value = '海报已交给系统分享面板。'
+    if (live) {
+      emit('shared', { type: 'poster', channel: 'native' })
+      message.value = '海报已交给系统分享面板。'
+    }
   } catch (error) {
     if (live) message.value = error.name === 'AbortError' ? '分享已取消，海报还在这里。' : '分享暂时没有成功，可以保存图片后手动发送。'
   } finally {

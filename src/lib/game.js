@@ -2,6 +2,15 @@
 export const STORAGE_KEY = 'wonder-pocket:v1';
 export const DAILY_LIMITS = Object.freeze({ help: 3, blind: 1, fusion: 1 });
 export const REPAIR_MS = 24 * 60 * 60 * 1000;
+export const MEMBER_REPAIR_MS = REPAIR_MS / 2;
+export const MAX_BACKUP_BYTES = 1024 * 1024;
+export const MAX_SHARE_REWARDS = 2;
+
+export function getUsageLimits(role = 'guest') {
+  if (role === 'member') return { help: Infinity, blind: Infinity, fusion: Infinity };
+  if (role === 'registered') return { help: 5, blind: 2, fusion: 2 };
+  return { ...DAILY_LIMITS };
+}
 
 const catalog = [
   {
@@ -122,6 +131,33 @@ export const GADGETS = Object.freeze(catalog.map((item) => Object.freeze({
   ...item, durability: item.maxDurability, visual: Object.freeze({ kind: item.kind, color: item.color }),
 })));
 export const gadgets = GADGETS;
+// These are recurring activity windows, not calculated lunar holiday dates.
+export const SEASONAL_EVENTS = Object.freeze([
+  Object.freeze({ id: 'children-day', name: '六一时光口袋', description: '给长大的自己放一个小小的儿童节假期。', start: '05-28', end: '06-03', calendar: 'gregorian', priceCents: 600 }),
+  Object.freeze({ id: 'spring-festival', name: '新春暖暖口袋', description: '每年1月20日至2月28日的新春季，把团圆和好兆头装进口袋。', start: '01-20', end: '02-28', calendar: 'gregorian', priceCents: 600 }),
+  Object.freeze({ id: 'valentines-day', name: '心意邮局口袋', description: '给爱人、朋友，也给自己，寄一点说得出口的温柔。', start: '02-10', end: '02-16', calendar: 'gregorian', priceCents: 600 }),
+]);
+const seasonalCatalog = [
+  { eventId: 'children-day', id: 'seasonal-paper-plane', no: 'C01', name: '下课纸飞机', kind: 'balloon', color: '#b4a178', effect: '把一小段课间时光送到你手边，认真放空十分钟。', warning: '飞机可能把会议纪要折成小船。', fortune: { good: '给自己放个课间', bad: '把休息变成作业', tip: '长大了，也可以拥有下课铃。' }, stories: ['纸飞机落在桌角，你给自己留了十分钟，窗外的天空刚好很蓝。', '飞机把一页纪要折成小船。同事看了看，提议会议也早点下课。', '飞机放出了一整盒彩色课间铃声，打印机和订书机组了一支校园乐队。', '纸飞机带来一张旧朋友的小纸条，你们约好找个下午一起聊聊天。'] },
+  { eventId: 'children-day', id: 'seasonal-crayon', no: 'C02', name: '心情蜡笔盒', kind: 'tape', color: '#bf927d', effect: '为今天的心情选一种颜色，把乱糟糟的感受画出来。', warning: '蜡笔偶尔会先给你的眉毛上色。', fortune: { good: '随手涂一张画', bad: '追求画得像不像', tip: '画得歪一点，也能很认真地表达自己。' }, stories: ['你画了几条笨拙的线，心里的感受却终于有了可以看见的样子。', '蜡笔给眉毛添了两条彩虹，你看着镜子笑了很久。', '蜡笔决定给全屋家具加表情，严肃的书柜突然成了最爱笑的那个。', '画纸上多出了一束温柔的颜色，你发现原来今天也藏着一点点好心情。'] },
+  { eventId: 'children-day', id: 'seasonal-marble', no: 'C03', name: '夏天玻璃球', kind: 'compass', color: '#8faba0', effect: '借你一束小时候的夏天，提醒你生活还有慢慢过的可能。', warning: '玻璃球里的蝉叫偶尔会忘记调低音量。', fortune: { good: '喝一杯冰凉的水', bad: '把日子过成倒计时', tip: '有些快乐，不需要很贵的门票。' }, stories: ['玻璃球里有树荫和一阵风，你的肩膀慢慢放松下来。', '蝉声大了一点，你只好给玻璃球包上手帕，它终于学会了小声唱歌。', '玻璃球把客厅变成了夏日操场，所有拖鞋都要求参加接力比赛。', '你想起一个很久没做的小爱好，今天恰好有时间重新试试。'] },
+  { eventId: 'spring-festival', id: 'seasonal-red-envelope', no: 'S01', name: '暖意红包机', kind: 'camera', color: '#bf7369', effect: '把一句真心的祝福折成小红包，送给在意的人。', warning: '红包里偶尔装的是一张拥抱兑换券。', fortune: { good: '说一句真心祝福', bad: '和别人的年终总结较劲', tip: '新的一年，也先好好照顾眼前的自己。' }, stories: ['你送出一句朴素的祝福，对方笑着回了一个暖暖的表情。', '红包里只有一张拥抱券，收红包的人认真问起了兑换地址。', '红包机一口气吐出五十张“请喝热水”兑换券，亲友群临时成立了热水俱乐部。', '你收到一段很久没听过的熟悉声音，团圆原来可以从一个电话开始。'] },
+  { eventId: 'spring-festival', id: 'seasonal-lantern', no: 'S02', name: '归家小灯笼', kind: 'lamp', color: '#ce8c61', effect: '为牵挂的人留一束灯光，把惦记轻轻送到远处。', warning: '灯笼有时会先把导航带去街角的小吃店。', fortune: { good: '打个电话问声好', bad: '把想念憋成客套话', tip: '有人记挂的方向，也可以叫家。' }, stories: ['灯光落在手机旁边，你拨通了那个一直想打的电话。', '灯笼先照亮了小吃店，你补充好能量，再继续寻找归家的路。', '灯笼把每张椅子都标成“欢迎回家”，来客坐下就被它热情照亮。', '灯光把一张旧照片照得很暖，你突然觉得，距离也挡不住认真惦记。'] },
+  { eventId: 'spring-festival', id: 'seasonal-reunion-spoon', no: 'S03', name: '团圆汤圆勺', kind: 'bottle', color: '#bd9c7a', effect: '给普通的一顿饭添一点陪伴，让忙碌的人也记得按时吃饭。', warning: '勺子可能坚持给每颗汤圆起名字。', fortune: { good: '好好吃顿饭', bad: '空着肚子忙到夜里', tip: '团圆也可以是给自己留一碗热汤。' }, stories: ['勺子端来一碗热汤，你安安稳稳吃完饭，才继续处理今天的事。', '每颗汤圆都有名字，你花了一会儿听完它们的自我介绍。', '汤圆排着队开年会，你被选为主持人，奖品是最后一口芝麻馅。', '你请一个朋友一起吃饭，话题从天气慢慢聊到了彼此最近的心事。'] },
+  { eventId: 'valentines-day', id: 'seasonal-heart-stamp', no: 'V01', name: '心意邮票', kind: 'badge', color: '#c68986', effect: '把藏在心里的感谢写得更清楚，寄给值得被珍惜的人。', warning: '邮票会自动给每句话加一个温柔的句号。', fortune: { good: '认真说声谢谢', bad: '用猜测代替表达', tip: '重要的话，可以说得简单一点。' }, stories: ['你写下了一句谢谢，对方说自己刚好很需要这句话。', '邮票给“吃饭了吗”加了三个温柔的句号，看起来像一封很短的情书。', '邮票把购物清单也盖成了心意信，西红柿和洗衣液都收到了郑重的感谢。', '你们终于把一句藏了很久的话说清楚，普通的一天也有了纪念意义。'] },
+  { eventId: 'valentines-day', id: 'seasonal-two-cups', no: 'V02', name: '同频小茶杯', kind: 'bell', color: '#b390aa', effect: '给两个人留一段慢慢聊天的时间，也能陪自己安静喝一杯茶。', warning: '两只茶杯意见不合时，会交换彼此的杯垫。', fortune: { good: '听完对方的话', bad: '急着给每个问题找答案', tip: '陪伴有时只需要不赶时间。' }, stories: ['茶慢慢凉下来，话也慢慢说开了。你们没有急着结束这段聊天。', '茶杯交换了杯垫，你们也跟着换了个角度，听到了以前忽略的小事。', '茶杯开始辩论谁泡的茶更香，桌上的饼干只好出来主持和平会议。', '一个安静的下午，让你更懂另一个人，也更懂自己一点。'] },
+  { eventId: 'valentines-day', id: 'seasonal-self-love-mirror', no: 'V03', name: '给自己情书镜', kind: 'key', color: '#bc9a73', effect: '照见一件值得肯定自己的小事，给自己写一句认真而温柔的话。', warning: '镜子太热情时，会夸奖你的睡衣搭配。', fortune: { good: '夸夸今天的自己', bad: '把爱自己排在最后', tip: '你也可以是自己的重要的人。' }, stories: ['镜子没有挑毛病，只提醒你今天做了一件认真又不容易的小事。', '镜子郑重赞美了你的睡衣，你决定接受这个非常具体的夸奖。', '镜子把家里的所有反光面都变成夸夸团，你每路过一次就收到一轮掌声。', '你给自己写下一句“辛苦了”，终于愿意用对待朋友的方式对待自己。'] },
+];
+export const SEASONAL_GADGETS = Object.freeze(seasonalCatalog.map((gadget) => Object.freeze({
+  ...gadget, category: '节日限定', rarity: '稀有', maxDurability: 3, durability: 3,
+  keywords: [], visual: Object.freeze({ kind: gadget.kind, color: gadget.color }),
+})));
+export function listSeasonalEvents(now = Date.now()) {
+  const date = new Date(now);
+  const day = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return SEASONAL_EVENTS.map((event) => ({ ...event, active: event.start <= event.end ? day >= event.start && day <= event.end : day >= event.start || day <= event.end }));
+}
+export function getSeasonalGadgets(eventId) { return SEASONAL_GADGETS.filter((gadget) => gadget.eventId === eventId); }
 export const OUTCOME_KINDS = Object.freeze(['normal', 'oops', 'chaos', 'surprise']);
 const TITLES = { normal: '刚刚好的小魔法', oops: '哎呀，出了一点小乌龙', chaos: '事情朝奇怪的方向发展了！', surprise: '口袋送你一份意外惊喜' };
 const eventCatalog = [
@@ -209,32 +245,67 @@ export function localDay(now = Date.now()) {
 }
 export function createState(now = Date.now()) {
   return {
-    version: 1, collected: [], customGadgets: [], events: [], eventRecords: [], achievements: [],
+    version: 1, collected: [], favorites: [], customGadgets: [], events: [], eventRecords: [], achievements: [], history: [], entitlements: [],
     usage: { date: localDay(now), help: 0, blind: 0, fusion: 0 },
     durability: {}, repair: { date: localDay(now), used: 0 },
+    shareRewards: { date: localDay(now), used: 0, credits: 0 },
     stats: { totalUses: 0, chaosStreak: 0, maxChaosStreak: 0, fusions: 0, surprises: 0 },
-    settings: { sound: false }, lastFortune: null, todayGadgetId: null,
+    settings: { sound: false, guideSeen: false, storageConsent: false, analyticsConsent: false }, lastFortune: null, todayGadgetId: null,
   };
 }
 export function ensureDaily(state, now = Date.now()) {
   const day = localDay(now);
   if (state.usage?.date !== day) state.usage = { date: day, help: 0, blind: 0, fusion: 0 };
   if (state.repair?.date !== day) state.repair = { date: day, used: 0 };
+  if (state.shareRewards?.date !== day) state.shareRewards = { date: day, used: 0, credits: nonnegative(state.shareRewards?.credits) };
   return state;
 }
 function isRecord(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
 function nonnegative(value, fallback = 0) { return Number.isFinite(value) && value >= 0 ? Math.floor(value) : fallback; }
-export function loadState(storage, now = Date.now()) {
+const unsafeKeys = new Set(['__proto__', 'prototype', 'constructor']);
+function safeId(value) { return typeof value === 'string' && value.length > 0 && value.length <= 200 && /^[A-Za-z0-9][A-Za-z0-9:._-]*$/.test(value) && !unsafeKeys.has(value); }
+function boundedText(value, max, fallback = '') { return typeof value === 'string' ? value.slice(0, max) : fallback; }
+function validCustomGadget(item) {
+  return isRecord(item) && safeId(item.id) && typeof item.name === 'string' && item.name.length > 0 && item.name.length <= 100 && typeof item.effect === 'string' && item.effect.length > 0 && item.effect.length <= 2000 && Number.isSafeInteger(item.maxDurability) && item.maxDurability > 0 && item.maxDurability <= 100;
+}
+function normalizeCustomGadget(item) {
+  const kinds = new Set(GADGETS.map((gadget) => gadget.kind));
+  const kind = kinds.has(item.kind || item.visual?.kind) ? (item.kind || item.visual.kind) : 'star';
+  const color = /^#[a-fA-F0-9]{3,8}$/.test(item.color || item.visual?.color || '') ? (item.color || item.visual.color) : '#b89963';
+  const result = {
+    id: item.id, no: boundedText(item.no, 100, 'F-NEW'), name: item.name, category: boundedText(item.category, 100, '冒险搞怪'),
+    rarity: ['普通', '稀有', '传说'].includes(item.rarity) ? item.rarity : '稀有', kind, color, visual: { kind, color },
+    effect: item.effect, warning: boundedText(item.warning, 2000, '新的小魔法可能会冒出意料之外的小乌龙。'), maxDurability: item.maxDurability, durability: item.maxDurability,
+    keywords: Array.isArray(item.keywords) ? item.keywords.filter((word) => typeof word === 'string').slice(0, 50).map((word) => word.slice(0, 100)) : [],
+    fortune: { good: boundedText(item.fortune?.good, 200, '试一点新想法'), bad: boundedText(item.fortune?.bad, 200, '第一次就要求完美'), tip: boundedText(item.fortune?.tip, 500, '奇怪的小组合，也可能藏着温柔的答案。') },
+  };
+  if (Array.isArray(item.stories)) result.stories = item.stories.filter((story) => typeof story === 'string').slice(0, 4).map((story) => story.slice(0, 5000));
+  if (Array.isArray(item.parents)) result.parents = item.parents.filter(safeId).slice(0, 2);
+  if (typeof item.eventId === 'string' && SEASONAL_EVENTS.some((event) => event.id === item.eventId)) result.eventId = item.eventId;
+  return result;
+}
+function normalizeStoryAddon(value, kind) {
+  if (!isRecord(value) || !safeId(value.id)) return null;
+  if (kind === 'event') return { id: value.id, title: boundedText(value.title, 200, '口袋里的小意外'), text: boundedText(value.text, 2000, '道具遇上了一个小插曲。'), effect: boundedText(value.effect, 200), suffix: boundedText(value.suffix, 2000) };
+  return { id: value.id, title: boundedText(value.title, 200, '后续来了'), text: boundedText(value.text, 2000), worry: boundedText(value.worry, 100) };
+}
+function validHistoryRecord(item) {
+  return isRecord(item) && safeId(item.id) && safeId(item.gadgetId) && OUTCOME_KINDS.includes(item.kind) && typeof item.title === 'string' && item.title.length > 0 && item.title.length <= 200 && typeof item.text === 'string' && item.text.length > 0 && item.text.length <= 5000 && Number.isFinite(item.createdAt) && item.createdAt >= 0;
+}
+function normalizeHistoryRecord(item) {
+  return { id: item.id, createdAt: item.createdAt, kind: item.kind, title: boundedText(item.title, 200), text: boundedText(item.text, 5000), gadgetId: item.gadgetId,
+    gadgetName: boundedText(item.gadgetName, 100, '口袋道具'), worry: boundedText(item.worry, 100), strength: Math.max(0, Math.min(100, Number(item.strength) || 0)),
+    event: normalizeStoryAddon(item.event, 'event'), chain: normalizeStoryAddon(item.chain, 'chain') };
+}
+function hydrateState(saved, now, resetDaily = true) {
   const fallback = createState(now);
-  try {
-    if (storage === undefined) storage = globalThis.localStorage;
-    const raw = storage?.getItem(STORAGE_KEY);
-    if (!raw) return fallback;
-    const saved = JSON.parse(raw);
     if (!isRecord(saved) || saved.version !== 1) return fallback;
     for (const key of ['collected', 'events', 'achievements']) {
-      if (Array.isArray(saved[key])) fallback[key] = [...new Set(saved[key].filter((item) => typeof item === 'string'))];
+      if (Array.isArray(saved[key])) fallback[key] = [...new Set(saved[key].filter(safeId))].slice(0, 2000);
     }
+    if (Array.isArray(saved.favorites)) fallback.favorites = [...new Set(saved.favorites.filter((id) => safeId(id) && fallback.collected.includes(id)))];
+    if (Array.isArray(saved.entitlements)) fallback.entitlements = [...new Set(saved.entitlements.filter((id) => SEASONAL_EVENTS.some((event) => event.id === id)))];
+    if (Array.isArray(saved.history)) fallback.history = saved.history.filter(validHistoryRecord).slice(-30).map(normalizeHistoryRecord);
     if (Array.isArray(saved.eventRecords)) {
       const seen = new Set();
       fallback.eventRecords = saved.eventRecords.filter((record) => {
@@ -244,24 +315,33 @@ export function loadState(storage, now = Date.now()) {
         seen.add(record.id); return true;
       }).map((record) => ({ id: record.id.slice(0, 200), kind: record.kind, title: record.title.slice(0, 200), text: record.text.slice(0, 5000), gadgetName: record.gadgetName.slice(0, 100) }));
     }
-    if (Array.isArray(saved.customGadgets)) fallback.customGadgets = saved.customGadgets.filter((item) => isRecord(item) && typeof item.id === 'string' && typeof item.name === 'string' && typeof item.effect === 'string' && Number.isFinite(item.maxDurability) && item.maxDurability > 0);
+    if (Array.isArray(saved.customGadgets)) fallback.customGadgets = saved.customGadgets.filter(validCustomGadget).slice(0, 256).map(normalizeCustomGadget);
     if (isRecord(saved.usage) && typeof saved.usage.date === 'string') {
       fallback.usage.date = saved.usage.date;
       for (const key of Object.keys(DAILY_LIMITS)) fallback.usage[key] = nonnegative(saved.usage[key]);
     }
     if (isRecord(saved.repair) && typeof saved.repair.date === 'string') fallback.repair = { date: saved.repair.date, used: nonnegative(saved.repair.used) };
+    if (isRecord(saved.shareRewards) && typeof saved.shareRewards.date === 'string') fallback.shareRewards = { date: saved.shareRewards.date, used: Math.min(MAX_SHARE_REWARDS, nonnegative(saved.shareRewards.used)), credits: Math.min(10000, nonnegative(saved.shareRewards.credits)) };
     if (isRecord(saved.durability)) {
       for (const [id, record] of Object.entries(saved.durability)) {
-        if (!isRecord(record) || !Number.isFinite(record.current) || record.current < 0) continue;
+        if (!safeId(id) || !isRecord(record) || !Number.isFinite(record.current) || record.current < 0) continue;
         fallback.durability[id] = { current: Math.floor(record.current), repairAt: nonnegative(record.repairAt) };
+        if (Number.isFinite(record.brokenAt) && record.brokenAt >= 0) fallback.durability[id].brokenAt = record.brokenAt;
       }
     }
     if (isRecord(saved.stats)) for (const key of Object.keys(fallback.stats)) fallback.stats[key] = nonnegative(saved.stats[key]);
-    if (isRecord(saved.settings)) fallback.settings.sound = saved.settings.sound === true;
+    if (isRecord(saved.settings)) for (const key of ['sound', 'guideSeen', 'storageConsent', 'analyticsConsent']) fallback.settings[key] = saved.settings[key] === true;
     if (isRecord(saved.lastFortune) && typeof saved.lastFortune.gadgetId === 'string' && typeof saved.lastFortune.date === 'string') fallback.lastFortune = { gadgetId: saved.lastFortune.gadgetId, date: saved.lastFortune.date };
     if (typeof saved.todayGadgetId === 'string') fallback.todayGadgetId = saved.todayGadgetId;
-    return ensureDaily(fallback, now);
-  } catch { return fallback; }
+    return resetDaily ? ensureDaily(fallback, now) : fallback;
+}
+export function loadState(storage, now = Date.now()) {
+  try {
+    if (storage === undefined) storage = globalThis.localStorage;
+    const raw = storage?.getItem(STORAGE_KEY);
+    if (!raw || byteLength(raw) > MAX_BACKUP_BYTES) return createState(now);
+    return hydrateState(JSON.parse(raw), now);
+  } catch { return createState(now); }
 }
 export function saveState(storage, state) {
   // Support saveState(state) as a convenient browser call too.
@@ -271,40 +351,112 @@ export function saveState(storage, state) {
   }
   catch { return false; }
 }
-export function consumeUsage(state, type, now = Date.now()) {
+function byteLength(value) { return new TextEncoder().encode(value).byteLength; }
+function validDay(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T12:00:00Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+function boundedInteger(value, max = 1000000) { return Number.isSafeInteger(value) && value >= 0 && value <= max; }
+function safeTree(value, depth = 0) {
+  if (depth > 20) return false;
+  if (Array.isArray(value)) return value.every((item) => safeTree(item, depth + 1));
+  if (isRecord(value)) return Object.entries(value).every(([key, item]) => !unsafeKeys.has(key) && safeTree(item, depth + 1));
+  return value === null || ['string', 'number', 'boolean'].includes(typeof value);
+}
+function validBackup(saved) {
+  if (!isRecord(saved) || saved.version !== 1 || !safeTree(saved)) return false;
+  if (!Array.isArray(saved.collected) || !isRecord(saved.usage) || !isRecord(saved.stats) || !isRecord(saved.durability)) return false;
+  for (const key of ['collected', 'favorites', 'events', 'achievements', 'entitlements']) {
+    if (saved[key] !== undefined && (!Array.isArray(saved[key]) || saved[key].length > 2000 || !saved[key].every(safeId))) return false;
+  }
+  if (saved.favorites?.some((id) => !saved.collected.includes(id))) return false;
+  if (saved.entitlements?.some((id) => !SEASONAL_EVENTS.some((event) => event.id === id))) return false;
+  if (!validDay(saved.usage.date) || !Object.keys(DAILY_LIMITS).every((key) => boundedInteger(saved.usage[key]))) return false;
+  if (!Object.values(saved.stats).every((value) => boundedInteger(value))) return false;
+  if (saved.repair !== undefined && (!isRecord(saved.repair) || !validDay(saved.repair.date) || !boundedInteger(saved.repair.used, 1))) return false;
+  if (saved.shareRewards !== undefined && (!isRecord(saved.shareRewards) || !validDay(saved.shareRewards.date) || !boundedInteger(saved.shareRewards.used, MAX_SHARE_REWARDS) || !boundedInteger(saved.shareRewards.credits, 10000))) return false;
+  if (saved.settings !== undefined && (!isRecord(saved.settings) || !Object.values(saved.settings).every((value) => typeof value === 'boolean'))) return false;
+  if (saved.customGadgets !== undefined && (!Array.isArray(saved.customGadgets) || saved.customGadgets.length > 256 || !saved.customGadgets.every(validCustomGadget))) return false;
+  if (saved.history !== undefined && (!Array.isArray(saved.history) || saved.history.length > 30 || !saved.history.every(validHistoryRecord))) return false;
+  if (saved.eventRecords !== undefined && (!Array.isArray(saved.eventRecords) || saved.eventRecords.length > 2000 || !saved.eventRecords.every((record) => isRecord(record) && safeId(record.id) && ['oops', 'chaos', 'event'].includes(record.kind) && ['title', 'text', 'gadgetName'].every((key) => typeof record[key] === 'string' && record[key].length > 0 && record[key].length <= (key === 'text' ? 5000 : 200))))) return false;
+  if (!Object.entries(saved.durability).every(([id, record]) => safeId(id) && isRecord(record) && boundedInteger(record.current, 100) && boundedInteger(record.repairAt, 8640000000000000) && (record.brokenAt === undefined || boundedInteger(record.brokenAt, 8640000000000000)))) return false;
+  if (saved.lastFortune !== undefined && saved.lastFortune !== null && (!isRecord(saved.lastFortune) || !safeId(saved.lastFortune.gadgetId) || !validDay(saved.lastFortune.date))) return false;
+  if (saved.todayGadgetId !== undefined && saved.todayGadgetId !== null && !safeId(saved.todayGadgetId)) return false;
+  return true;
+}
+/** Portable gameplay-only backup. Authentication, payment and account objects are omitted. */
+export function exportState(state) {
+  const text = JSON.stringify(hydrateState(state, Date.now(), false), null, 2);
+  if (byteLength(text) > MAX_BACKUP_BYTES) throw new RangeError('备份超过1MB，请先减少本地自定义内容。');
+  return text;
+}
+/** Validate completely before replacing caller state; malformed imports never reset progress. */
+export function importState(json, now = Date.now()) {
+  if (typeof json !== 'string' || byteLength(json) > MAX_BACKUP_BYTES) return { ok: false, reason: '备份必须是1MB以内的JSON文件。' };
+  try {
+    const saved = JSON.parse(json);
+    if (!validBackup(saved)) return { ok: false, reason: '备份格式或字段不正确，请选择从口袋事务所导出的文件。' };
+    return { ok: true, state: hydrateState(saved, now), reason: '' };
+  } catch { return { ok: false, reason: '无法读取这份备份，原来的收藏仍然保留。' }; }
+}
+export function consumeUsage(state, type, now = Date.now(), role = 'guest') {
   ensureDaily(state, now);
   if (!Object.hasOwn(DAILY_LIMITS, type)) return { ok: false, remaining: 0, reason: '未知玩法' };
-  const limit = DAILY_LIMITS[type];
+  const limit = getUsageLimits(role)[type];
   if (state.usage[type] >= limit) return { ok: false, remaining: 0, reason: '今天的免费次数已用完，明天再来看看吧。' };
   state.usage[type] += 1;
   return { ok: true, remaining: limit - state.usage[type], reason: '' };
 }
-export function getDurability(state, gadget, now = Date.now()) {
+export function getDurability(state, gadget, now = Date.now(), role = 'guest') {
   const max = gadget.maxDurability || gadget.durability || 5;
   const record = state.durability[gadget.id];
   if (!record) return { current: max, max, broken: false, repairAt: 0, remainingMs: 0 };
-  if (record.current <= 0 && record.repairAt <= now) {
+  const brokenAt = Number.isFinite(record.brokenAt) ? record.brokenAt : record.repairAt - REPAIR_MS;
+  const repairAt = record.current <= 0 ? brokenAt + (role === 'member' ? MEMBER_REPAIR_MS : REPAIR_MS) : 0;
+  if (record.current <= 0 && repairAt <= now) {
     record.current = max; record.repairAt = 0;
+    delete record.brokenAt;
   }
   const current = Math.min(max, record.current);
-  return { current, max, broken: current <= 0, repairAt: record.repairAt, remainingMs: Math.max(0, record.repairAt - now) };
+  return { current, max, broken: current <= 0, repairAt: current <= 0 ? repairAt : 0, remainingMs: current <= 0 ? Math.max(0, repairAt - now) : 0 };
 }
-export function useGadget(state, gadget, strength = 50, now = Date.now()) {
-  const durability = getDurability(state, gadget, now);
-  if (durability.broken) return { ok: false, reason: '道具正在口袋里修理，24小时后会自动恢复。', durability };
+export function useGadget(state, gadget, strength = 50, now = Date.now(), role = 'guest') {
+  const durability = getDurability(state, gadget, now, role);
+  if (durability.broken) return { ok: false, reason: `道具正在口袋里修理，${role === 'member' ? 12 : 24}小时后会自动恢复。`, durability };
   const cost = strengthTier(strength) === 'wild' ? 2 : 1;
   const current = Math.max(0, durability.current - cost);
   state.durability[gadget.id] = { current, repairAt: current === 0 ? now + REPAIR_MS : 0 };
-  return { ok: true, cost, durability: getDurability(state, gadget, now) };
+  if (current === 0) state.durability[gadget.id].brokenAt = now;
+  return { ok: true, cost, durability: getDurability(state, gadget, now, role) };
 }
-export function repairGadget(state, gadget, now = Date.now()) {
+export function repairGadget(state, gadget, now = Date.now(), role = 'guest') {
   ensureDaily(state, now);
-  const durability = getDurability(state, gadget, now);
+  const durability = getDurability(state, gadget, now, role);
   if (durability.current === durability.max) return { ok: false, reason: '这件道具状态很好，不需要修理。' };
-  if (state.repair.used >= 1) return { ok: false, reason: '今天的免费修理已用完，明天还会有一次。' };
-  state.repair.used += 1;
+  const source = state.repair.used < 1 ? 'daily' : state.shareRewards.credits > 0 ? 'share' : null;
+  if (!source) return { ok: false, reason: '今天的免费修理已用完，明天还会有一次。成功分享还可获得修理机会。' };
+  if (source === 'daily') state.repair.used += 1;
+  else state.shareRewards.credits -= 1;
   state.durability[gadget.id] = { current: durability.max, repairAt: 0 };
-  return { ok: true, durability: getDurability(state, gadget, now) };
+  return { ok: true, source, durability: getDurability(state, gadget, now, role) };
+}
+/** Call only after a share successfully completes; downloads and cancellations are not shares. */
+export function registerSuccessfulShare(state, now = Date.now()) {
+  ensureDaily(state, now);
+  if (state.shareRewards.credits >= 10000) return { ok: false, credits: state.shareRewards.credits, remaining: MAX_SHARE_REWARDS - state.shareRewards.used, reason: '已有足够的修理机会，先照顾好口袋里的道具吧。' };
+  if (state.shareRewards.used >= MAX_SHARE_REWARDS) return { ok: false, credits: state.shareRewards.credits, remaining: 0, reason: '今天的分享修理奖励已领取两次。' };
+  state.shareRewards.used += 1;
+  state.shareRewards.credits += 1;
+  return { ok: true, credits: state.shareRewards.credits, remaining: MAX_SHARE_REWARDS - state.shareRewards.used, reason: '' };
+}
+export function toggleFavorite(state, gadgetOrId) {
+  const id = typeof gadgetOrId === 'string' ? gadgetOrId : gadgetOrId?.id;
+  if (!safeId(id) || !state.collected.includes(id)) return false;
+  if (!Array.isArray(state.favorites)) state.favorites = [];
+  const index = state.favorites.indexOf(id);
+  if (index >= 0) { state.favorites.splice(index, 1); return false; }
+  state.favorites.push(id); return true;
 }
 export function collectGadget(state, gadget) {
   if (!gadget || state.collected.includes(gadget.id)) return false;
@@ -313,13 +465,18 @@ export function collectGadget(state, gadget) {
   updateAchievements(state);
   return true;
 }
-export function recordOutcome(state, outcome) {
+export function recordOutcome(state, outcome, now = Date.now()) {
   state.stats.totalUses += 1;
   state.stats.chaosStreak = outcome.kind === 'chaos' ? state.stats.chaosStreak + 1 : 0;
   state.stats.maxChaosStreak = Math.max(state.stats.maxChaosStreak, state.stats.chaosStreak);
   if (outcome.kind === 'surprise') state.stats.surprises += 1;
   if (!Array.isArray(state.eventRecords)) state.eventRecords = [];
-  const gadgetName = outcome.gadgetName || GADGETS.find((gadget) => gadget.id === outcome.gadgetId)?.name || state.customGadgets.find((gadget) => gadget.id === outcome.gadgetId)?.name || '口袋道具';
+  const gadgetName = outcome.gadgetName || GADGETS.find((gadget) => gadget.id === outcome.gadgetId)?.name || SEASONAL_GADGETS.find((gadget) => gadget.id === outcome.gadgetId)?.name || state.customGadgets.find((gadget) => gadget.id === outcome.gadgetId)?.name || '口袋道具';
+  if (!Array.isArray(state.history)) state.history = [];
+  const entry = normalizeHistoryRecord({ ...outcome, id: `history-${now}-${state.stats.totalUses}`, createdAt: now,
+    title: outcome.title || TITLES[outcome.kind] || '今天的口袋故事', text: outcome.text || `${gadgetName}留下一段小小的奇妙故事。`, gadgetName });
+  state.history.push(entry);
+  if (state.history.length > 30) state.history.splice(0, state.history.length - 30);
   if (outcome.kind === 'oops' || outcome.kind === 'chaos') {
     const key = `${outcome.kind}:${outcome.gadgetId}`;
     if (!state.events.includes(key)) state.events.push(key);
@@ -373,6 +530,11 @@ export function fuseGadgets(first, second, rng = Math.random) {
   };
 }
 export function recordFusion(state, result) {
+  if (result.failed) {
+    const id = 'fusion-fragments';
+    if (!state.events.includes(id)) state.events.push(id);
+    if (!state.eventRecords.some(record => record.id === id)) state.eventRecords.push({ id, kind: 'event', title: result.title || '合体实验冒出了一团小黑烟', text: result.text || '两件道具意见不合，只留下几块会打喷嚏的碎片。原道具都还好好的。', gadgetName: '合体实验室' });
+  }
   if (!result.ok || !result.gadget) return [];
   const before = new Set(state.achievements);
   state.stats.fusions += 1;
